@@ -67,6 +67,36 @@ function authenticateToken(req, res, next) {
         });
     }
 }
+  
+// ================================
+// Admin Authorization
+// ================================
+function requireAdmin(req, res, next) {
+    const admin = db.prepare(`
+        SELECT id, role
+        FROM teachers
+        WHERE id = ?
+    `).get(req.user.id);
+
+    if (!admin || admin.role !== "admin") {
+        return res.status(403).json({
+            success: false,
+            message: "غير مصرح لك بالدخول إلى لوحة الإدارة"
+        });
+    }
+
+    next();
+}
+
+// ================================
+// ADMIN - TEST
+// ================================
+app.get("/api/admin/test", authenticateToken, requireAdmin, (req, res) => {
+    res.json({
+        success: true,
+        message: "Admin access granted 👑"
+    });
+});
 
 // ================================
 // Home
