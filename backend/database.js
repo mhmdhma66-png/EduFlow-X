@@ -1,6 +1,8 @@
+const path = require("path");
 const Database = require("better-sqlite3");
 
-const db = new Database("eduflow.db");
+const dbPath = process.env.DB_PATH || path.join(__dirname, "eduflow.db");
+const db = new Database(dbPath); 
 
 db.pragma("foreign_keys = ON");
 
