@@ -177,4 +177,5 @@ CREATE TABLE IF NOT EXISTS subscriptions (
         ON DELETE CASCADE
 );
 `);
+// Latest deployment trigger
 module.exports = db;
