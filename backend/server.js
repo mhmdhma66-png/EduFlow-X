@@ -1398,6 +1398,106 @@ app.delete("/api/student-classes/:id", authenticateToken, (req, res) => {
         message: "تم إزالة الطالب من الحصة ✓"
     });
 });
+
+// ========================================
+// ADMIN API - protected by database role
+// ========================================
+db.exec(`
+CREATE TABLE IF NOT EXISTS site_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT '',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+app.get("/api/admin/overview", authenticateToken, requireAdmin, (req, res) => {
+  const teachers = db.prepare("SELECT COUNT(*) AS count FROM teachers").get().count;
+  const students = db.prepare("SELECT COUNT(*) AS count FROM students").get().count;
+  const subscriptions = db.prepare("SELECT COUNT(*) AS count FROM subscriptions WHERE status IN ('active','trial')").get().count;
+  const activeSubscriptions = db.prepare("SELECT COUNT(*) AS count FROM subscriptions WHERE status='active'").get().count;
+  res.json({ success: true, teachers, students, subscriptions, activeSubscriptions });
+});
+
+app.get("/api/admin/teachers", authenticateToken, requireAdmin, (req, res) => {
+  const teachers = db.prepare(`
+    SELECT t.id, t.name, t.email, t.phone, t.role, t.created_at,
+           s.plan AS subscription_plan, s.status AS subscription_status,
+           s.start_date AS subscription_start, s.end_date AS subscription_end,
+           s.payment_reference AS payment_reference
+    FROM teachers t
+    LEFT JOIN subscriptions s ON s.teacher_id = t.id
+    ORDER BY t.id DESC
+  `).all();
+  res.json({ success: true, teachers });
+});
+
+app.patch("/api/admin/teachers/:id/role", authenticateToken, requireAdmin, (req, res) => {
+  const id = Number(req.params.id);
+  const role = req.body?.role;
+  if (!Number.isInteger(id) || id <= 0 || !["teacher", "admin"].includes(role)) {
+    return res.status(400).json({ success: false, message: "بيانات غير صحيحة" });
+  }
+  if (id === Number(req.user.id) && role !== "admin") {
+    return res.status(400).json({ success: false, message: "لا يمكنك إزالة صلاحية الأدمن من حسابك الحالي" });
+  }
+  const result = db.prepare("UPDATE teachers SET role = ? WHERE id = ?").run(role, id);
+  if (!result.changes) return res.status(404).json({ success: false, message: "الحساب غير موجود" });
+  res.json({ success: true, message: "تم تحديث صلاحية الحساب" });
+});
+
+app.put("/api/admin/teachers/:id/subscription", authenticateToken, requireAdmin, (req, res) => {
+  const teacherId = Number(req.params.id);
+  const { plan = "monthly", status = "active", start_date = null, end_date = null, payment_reference = "" } = req.body || {};
+  if (!Number.isInteger(teacherId) || teacherId <= 0) return res.status(400).json({ success: false, message: "رقم الحساب غير صحيح" });
+  if (!["trial", "monthly", "yearly", "lifetime"].includes(plan)) return res.status(400).json({ success: false, message: "نوع الاشتراك غير صحيح" });
+  if (!["trial", "active", "expired", "cancelled", "pending"].includes(status)) return res.status(400).json({ success: false, message: "حالة الاشتراك غير صحيحة" });
+  const teacher = db.prepare("SELECT id FROM teachers WHERE id = ?").get(teacherId);
+  if (!teacher) return res.status(404).json({ success: false, message: "المدرس غير موجود" });
+  db.prepare(`
+    INSERT INTO subscriptions (teacher_id, plan, status, start_date, end_date, payment_reference)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(teacher_id) DO UPDATE SET
+      plan=excluded.plan, status=excluded.status, start_date=excluded.start_date,
+      end_date=excluded.end_date, payment_reference=excluded.payment_reference
+  `).run(teacherId, plan, status, start_date || null, end_date || null, String(payment_reference || "").slice(0, 200));
+  res.json({ success: true, message: "تم تحديث الاشتراك بنجاح" });
+});
+
+app.get("/api/admin/students", authenticateToken, requireAdmin, (req, res) => {
+  const students = db.prepare(`
+    SELECT s.id, s.name, s.phone, s.parent_phone, s.grade, s.class_name, s.created_at,
+           t.id AS teacher_id, t.name AS teacher_name, t.email AS teacher_email
+    FROM students s
+    LEFT JOIN teachers t ON t.id = s.teacher_id
+    ORDER BY s.id DESC
+  `).all();
+  res.json({ success: true, students });
+});
+
+app.get("/api/admin/settings", authenticateToken, requireAdmin, (req, res) => {
+  const settings = db.prepare("SELECT key, value, updated_at FROM site_settings ORDER BY key").all();
+  res.json({ success: true, settings });
+});
+
+app.put("/api/admin/settings", authenticateToken, requireAdmin, (req, res) => {
+  const entries = req.body?.settings;
+  if (!entries || typeof entries !== "object" || Array.isArray(entries)) {
+    return res.status(400).json({ success: false, message: "الإعدادات غير صحيحة" });
+  }
+  const allowed = new Set(["site_name", "support_email", "support_phone", "announcement", "trial_days"]);
+  const save = db.prepare(`
+    INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP
+  `);
+  const tx = db.transaction(() => {
+    for (const [key, value] of Object.entries(entries)) {
+      if (allowed.has(key)) save.run(key, String(value ?? "").slice(0, 1000));
+    }
+  });
+  tx();
+  res.json({ success: true, message: "تم حفظ إعدادات الموقع" });
+});
+
 // ================================
 // START SERVER
 // ================================

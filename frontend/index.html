@@ -49,6 +49,18 @@ table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px s
 .student-class-option{width:18px;height:18px;accent-color:var(--p);flex:0 0 auto}
 
 .schedule-students-count{font-size:12px;color:var(--muted)}
+
+body.admin-mode .teacher-page, body.admin-mode .teacher-only { display:none !important; }
+body.admin-mode #adminNav { display:block !important; }
+body.admin-mode #adminPanel { display:block; }
+.admin-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0 20px}
+.admin-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.admin-toolbar input{max-width:320px}
+.admin-table-wrap{overflow:auto}
+.admin-table-wrap table{min-width:760px}
+.admin-status{display:inline-block;padding:4px 8px;border-radius:7px;background:#e0e7ff;color:#3730a3;font-size:11px}
+@media(max-width:900px){.admin-stat-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.admin-stat-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -80,22 +92,31 @@ table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px s
 
 <div class="layout">
 <aside id="side" class="side">
- <div class="side-title">الإدارة</div>
- <button class="nav active" onclick="page('home',this)">🏠 <span>لوحة التحكم</span></button>
- <button class="nav" onclick="page('students',this)">👨‍🎓 <span>الطلاب والملفات</span></button>
- <button class="nav" onclick="page('attendance',this)">✅ <span>الحضور والغياب</span></button>
- <button class="nav" onclick="page('grades',this)">📝 <span>الدرجات والاختبارات</span></button>
- <button class="nav" onclick="page('schedule',this)">📅 <span>جدول الحصص</span></button>
- <button class="nav" onclick="page('reports',this)">📊 <span>التقارير والإحصائيات</span></button>
- <div class="side-title" style="margin-top:23px">الأدوات</div>
- <button class="nav" onclick="backup()">💾 <span>نسخة احتياطية</span></button>
- <button class="nav" onclick="document.getElementById('restore').click()">📥 <span>استرجاع بيانات</span></button>
+ <div class="side-title teacher-only">الإدارة</div>
+ <button class="nav teacher-only active" onclick="page('home',this)">🏠 <span>لوحة التحكم</span></button>
+ <button class="nav teacher-only" onclick="page('students',this)">👨‍🎓 <span>الطلاب والملفات</span></button>
+ <button class="nav teacher-only" onclick="page('attendance',this)">✅ <span>الحضور والغياب</span></button>
+ <button class="nav teacher-only" onclick="page('grades',this)">📝 <span>الدرجات والاختبارات</span></button>
+ <button class="nav teacher-only" onclick="page('schedule',this)">📅 <span>جدول الحصص</span></button>
+ <button class="nav teacher-only" onclick="page('reports',this)">📊 <span>التقارير والإحصائيات</span></button>
+ <div class="side-title teacher-only" style="margin-top:23px">الأدوات</div>
+ <button class="nav teacher-only" onclick="backup()">💾 <span>نسخة احتياطية</span></button>
+ <button class="nav teacher-only" onclick="document.getElementById('restore').click()">📥 <span>استرجاع بيانات</span></button>
  <input id="restore" type="file" accept=".json" hidden onchange="restore(event)">
- <button class="nav" onclick="clearAll()">🗑️ <span>مسح كل البيانات</span></button>
+ <button class="nav teacher-only" onclick="clearAll()">🗑️ <span>مسح كل البيانات</span></button>
+
+  <div id="adminNav" class="hidden">
+    <div class="side-title">إدارة المنصة</div>
+    <button class="nav active" onclick="loadAdminTab('overview',this)">📊 <span>نظرة عامة</span></button>
+    <button class="nav" onclick="loadAdminTab('teachers',this)">👨‍🏫 <span>حسابات المدرسين</span></button>
+    <button class="nav" onclick="loadAdminTab('subscriptions',this)">💳 <span>الاشتراكات والتفعيل</span></button>
+    <button class="nav" onclick="loadAdminTab('students',this)">🎓 <span>كل الطلاب</span></button>
+    <button class="nav" onclick="loadAdminTab('settings',this)">⚙️ <span>إعدادات الموقع</span></button>
+  </div>
 </aside>
 
 <main class="main">
-<section id="home" class="page">
+<section id="home" class="page teacher-page">
  <div class="hero"><h2>أهلاً بك يا أستاذ 👋</h2><p>كل أدوات إدارة الطلاب في لوحة واحدة — بشكل سريع ومرتب.</p><span class="date" id="dateText"></span></div>
  <div class="cards">
   <div class="stat"><span class="badge ok">LIVE</span><div class="sicon">👨‍🎓</div><b id="stStudents">0</b><small>إجمالي الطلاب</small></div>
@@ -114,30 +135,35 @@ table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px s
  </div>
 </section>
 
-<section id="students" class="page hidden">
+<section id="students" class="page teacher-page hidden">
  <div class="head"><div><h2>👨‍🎓 الطلاب والملفات</h2><div class="muted">ملف كامل لكل طالب مع بيانات ولي الأمر</div></div><button class="primary" onclick="openStudent()">＋ إضافة طالب</button></div>
  <div class="panel"><div class="search"><span>🔎</span><input id="studentSearch" oninput="renderStudents()" placeholder="ابحث باسم الطالب أو الصف..."></div><div class="table-wrap" style="margin-top:15px;overflow:auto"><table><thead><tr><th>الطالب</th><th>الصف</th><th>الهاتف</th><th>ولي الأمر</th><th>إجراء</th></tr></thead><tbody id="studentBody"></tbody></table></div></div>
 </section>
 
-<section id="attendance" class="page hidden">
+<section id="attendance" class="page teacher-page hidden">
  <div class="head"><div><h2>✅ الحضور والغياب</h2><div class="muted">اضغط الحالة المناسبة وسيتم الحفظ فورًا</div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="attClass" style="min-width:220px" onchange="renderAttendance()"></select><input id="attDate" type="date" style="max-width:190px" onchange="renderAttendance()"></div></div>
  <div class="panel"><div id="attList"></div></div>
 </section>
 
-<section id="grades" class="page hidden">
+<section id="grades" class="page teacher-page hidden">
  <div class="head"><div><h2>📝 الدرجات والاختبارات</h2><div class="muted">سجل كل اختبار وراجع درجات الطلاب</div></div><button class="primary" onclick="openGrade()">＋ إضافة درجة</button></div>
  <div class="panel"><div class="table-wrap" style="overflow:auto"><table><thead><tr><th>الطالب</th><th>المادة</th><th>الاختبار</th><th>الدرجة</th><th>النسبة</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="gradeBody"></tbody></table></div></div>
 </section>
 
-<section id="schedule" class="page hidden">
+<section id="schedule" class="page teacher-page hidden">
  <div class="head"><div><h2>📅 جدول الحصص</h2><div class="muted">نظم مواعيد الحصص الأسبوعية</div></div><button class="primary" onclick="openSchedule()">＋ إضافة حصة</button></div>
  <div class="panel"><div class="table-wrap" style="overflow:auto"><table><thead><tr><th>اليوم</th><th>المادة</th><th>الصف</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody id="scheduleBody"></tbody></table></div></div>
 </section>
 
-<section id="reports" class="page hidden">
+<section id="reports" class="page teacher-page hidden">
  <div class="head"><div><h2>📊 التقارير والإحصائيات</h2><div class="muted">تحليل سريع لأداء الطلاب</div></div><button class="primary" onclick="window.print()">🖨️ طباعة</button></div>
  <div class="panel"><div class="report-grid"><div class="report-card">👨‍🎓 الطلاب<b id="r1">0</b></div><div class="report-card">📋 سجلات الحضور<b id="r2">0</b></div><div class="report-card">📝 الدرجات<b id="r3">0</b></div></div></div>
  <div class="grid"><div class="panel"><h3>متوسط درجات الطلاب</h3><div id="bars"></div></div><div class="panel"><h3>ملخص الأداء</h3><div class="table-wrap"><table><thead><tr><th>الطالب</th><th>اختبارات</th><th>المتوسط</th></tr></thead><tbody id="reportBody"></tbody></table></div></div></div>
+</section>
+
+<section id="adminPanel" class="page hidden">
+  <div class="hero"><h2>لوحة إدارة EduFlow X 👑</h2><p>إدارة المدرسين والاشتراكات والطلاب وإعدادات المنصة من مكان واحد.</p></div>
+  <div id="adminContent"><div class="empty">جارٍ تحميل بيانات الإدارة...</div></div>
 </section>
 </main></div></div>
 
@@ -183,12 +209,22 @@ function showLogin(){
 function enterApp(){
   $('loginPage').classList.add('hidden');
   $('app').classList.remove('hidden');
+  const isAdmin = currentTeacher?.role === 'admin';
+  document.body.classList.toggle('admin-mode', isAdmin);
+  $('adminNav').classList.toggle('hidden', !isAdmin);
   if(currentTeacher){
     const first = (currentTeacher.name || 'م').trim().charAt(0) || 'م';
     document.querySelector('.avatar').textContent = first;
-    document.querySelector('.user span').textContent = currentTeacher.name || 'المدرس';
+    document.querySelector('.user span').textContent = (isAdmin ? 'أدمن المنصة · ' : '') + (currentTeacher.name || 'المدرس');
     const hero = document.querySelector('#home .hero h2');
     if(hero) hero.textContent = `أهلاً بك يا ${currentTeacher.name || 'أستاذ'} 👋`;
+    if(isAdmin){
+      document.querySelectorAll('.teacher-page').forEach(x=>x.classList.add('hidden'));
+      $('adminPanel').classList.remove('hidden');
+      $('adminContent').innerHTML='<div class="empty">جارٍ تحميل لوحة الإدارة...</div>';
+    } else {
+      $('adminPanel').classList.add('hidden');
+    }
   }
 }
 
@@ -203,6 +239,7 @@ async function login(){
     currentTeacher=result.teacher;
     enterApp();
     await loadAll();
+    if(currentTeacher?.role==='admin') await loadAdminTab('overview');
     showToast('تم تسجيل الدخول بنجاح 🎉');
   }catch(e){ $('loginMsg').textContent=e.message; }
 }
@@ -235,13 +272,13 @@ async function registerTeacher(){
   }catch(e){$('registerMsg').textContent=e.message;}
 }
 
-function logout(){ setToken(''); currentTeacher=null; data={students:[],attendance:[],grades:[],schedule:[]}; showLogin(); $('loginPass').value=''; $('loginMsg').textContent=''; }
+function logout(){ document.body.classList.remove('admin-mode'); setToken(''); currentTeacher=null; data={students:[],attendance:[],grades:[],schedule:[]}; showLogin(); $('loginPass').value=''; $('loginMsg').textContent=''; }
 
 async function checkAuth(){
   if(!token()){ showLogin(); return; }
   try{
     const result=await api('/api/auth/me');
-    currentTeacher=result.teacher; enterApp(); await loadAll();
+    currentTeacher=result.teacher; enterApp(); await loadAll(); if(currentTeacher?.role==='admin') await loadAdminTab('overview');
   }catch(e){ showLogin(); }
 }
 
@@ -886,6 +923,104 @@ async function clearAll(){
     for(const q of [...data.schedule]) await api('/api/schedule/'+q.id,{method:'DELETE'});
     await loadAll();showToast('تم مسح بيانات الحساب ✓');
   }catch(e){alert(e.message)}
+}
+
+
+// ========================================
+// ADMIN DASHBOARD
+// ========================================
+let adminCache = { overview:null, teachers:[], students:[], settings:[] };
+async function loadAdminTab(tab='overview', btn=null){
+  if(currentTeacher?.role!=='admin'){ showToast('غير مصرح لك'); return; }
+  document.querySelectorAll('#adminNav .nav').forEach(x=>x.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  $('adminPanel').classList.remove('hidden');
+  document.querySelectorAll('.teacher-page').forEach(x=>x.classList.add('hidden'));
+  const root=$('adminContent');
+  root.innerHTML='<div class="empty">جارٍ تحميل البيانات...</div>';
+  try{
+    if(tab==='overview'){
+      const r=await api('/api/admin/overview'); adminCache.overview=r;
+      root.innerHTML=`<div class="head"><div><h2>📊 نظرة عامة</h2><div class="muted">ملخص شامل لحالة المنصة</div></div><button class="primary" onclick="loadAdminTab('overview')">تحديث</button></div>
+      <div class="admin-stat-grid">
+       <div class="stat"><div class="sicon">👨‍🏫</div><b>${r.teachers}</b><small>حسابات المدرسين</small></div>
+       <div class="stat"><div class="sicon">🎓</div><b>${r.students}</b><small>إجمالي الطلاب</small></div>
+       <div class="stat"><div class="sicon">💳</div><b>${r.subscriptions}</b><small>اشتراكات تجريبية/نشطة</small></div>
+       <div class="stat"><div class="sicon">✅</div><b>${r.activeSubscriptions}</b><small>اشتراكات مفعّلة</small></div>
+      </div><div class="panel"><h3>اختصارات الإدارة</h3><div class="quick" style="margin-top:12px">
+      <button onclick="loadAdminTab('teachers')">👨‍🏫 <b>إدارة المدرسين</b><br><span class="muted">عرض الحسابات وتغيير الصلاحيات</span></button>
+      <button onclick="loadAdminTab('subscriptions')">💳 <b>الاشتراكات</b><br><span class="muted">تفعيل وتجديد الاشتراكات يدويًا</span></button>
+      <button onclick="loadAdminTab('students')">🎓 <b>كل الطلاب</b><br><span class="muted">عرض الطلاب التابعين لكل المدرسين</span></button>
+      <button onclick="loadAdminTab('settings')">⚙️ <b>إعدادات الموقع</b><br><span class="muted">اسم المنصة وبيانات الدعم والإعلان</span></button>
+      </div></div>`;
+    } else if(tab==='teachers' || tab==='subscriptions'){
+      const r=await api('/api/admin/teachers'); adminCache.teachers=r.teachers||[];
+      const list=adminCache.teachers;
+      root.innerHTML=`<div class="head"><div><h2>${tab==='teachers'?'👨‍🏫 حسابات المدرسين':'💳 الاشتراكات والتفعيل'}</h2><div class="muted">إجمالي الحسابات: ${list.length}</div></div><button class="primary" onclick="loadAdminTab('${tab}')">تحديث</button></div>
+      <div class="panel"><div class="admin-toolbar"><input id="adminSearch" placeholder="ابحث بالاسم أو البريد الإلكتروني..." oninput="filterAdminTable('${tab}')"></div>
+      <div class="admin-table-wrap"><table><thead><tr><th>المدرس</th><th>البريد الإلكتروني</th><th>الدور</th><th>الخطة</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="adminTeacherRows">${list.map(t=>adminTeacherRow(t,tab)).join('')||'<tr><td colspan="6" class="empty">لا توجد حسابات</td></tr>'}</tbody></table></div></div>`;
+    } else if(tab==='students'){
+      const r=await api('/api/admin/students'); adminCache.students=r.students||[];
+      root.innerHTML=`<div class="head"><div><h2>🎓 كل الطلاب</h2><div class="muted">عدد الطلاب على مستوى المنصة: ${adminCache.students.length}</div></div><button class="primary" onclick="loadAdminTab('students')">تحديث</button></div>
+      <div class="panel"><div class="admin-toolbar"><input id="adminStudentSearch" placeholder="ابحث باسم الطالب أو المدرس..." oninput="filterAdminStudents()"></div><div class="admin-table-wrap"><table><thead><tr><th>الطالب</th><th>الصف/الفصل</th><th>الهاتف</th><th>المدرس</th><th>بريد المدرس</th><th>تاريخ الإضافة</th></tr></thead><tbody id="adminStudentRows">${adminCache.students.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.class_name||s.grade||'-')}</td><td>${esc(s.phone||'-')}</td><td>${esc(s.teacher_name||'-')}</td><td>${esc(s.teacher_email||'-')}</td><td>${esc(String(s.created_at||'').slice(0,10)||'-')}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا يوجد طلاب</td></tr>'}</tbody></table></div></div>`;
+    } else if(tab==='settings'){
+      const r=await api('/api/admin/settings'); const values=Object.fromEntries((r.settings||[]).map(x=>[x.key,x.value])); adminCache.settings=values;
+      root.innerHTML=`<div class="head"><div><h2>⚙️ إعدادات الموقع</h2><div class="muted">تُحفظ الإعدادات في قاعدة بيانات المنصة</div></div></div>
+      <div class="panel"><div class="field"><label>اسم المنصة</label><input id="setSiteName" value="${esc(values.site_name||'EduFlow X')}"></div>
+      <div class="form-grid"><div class="field"><label>بريد الدعم</label><input id="setSupportEmail" type="email" value="${esc(values.support_email||'')}"></div><div class="field"><label>هاتف الدعم</label><input id="setSupportPhone" value="${esc(values.support_phone||'')}"></div>
+      <div class="field"><label>مدة التجربة بالأيام (إعداد محفوظ فقط)</label><input id="setTrialDays" type="number" min="0" max="365" value="${esc(values.trial_days||'14')}"></div></div>
+      <div class="field"><label>إعلان يظهر كإعداد للمنصة (محفوظ، لا يُعرض تلقائيًا في واجهة المدرس بعد)</label><textarea id="setAnnouncement" rows="4">${esc(values.announcement||'')}</textarea></div>
+      <button class="primary" onclick="saveAdminSettings()">حفظ الإعدادات</button></div>`;
+    }
+  }catch(e){root.innerHTML=`<div class="panel"><h3>تعذر تحميل لوحة الإدارة</h3><p class="muted">${esc(e.message)}</p><button class="primary" onclick="loadAdminTab('${tab}')">إعادة المحاولة</button></div>`;}
+}
+function adminTeacherRow(t,tab){
+ const role=t.role==='admin'?'أدمن':'مدرس';
+ const status=t.subscription_status||'غير مشترك';
+ const plan=t.subscription_plan||'—';
+ const safeId=Number(t.id);
+ const action=tab==='teachers'
+  ? `<button class="small" onclick="toggleTeacherRole(${safeId},'${t.role==='admin'?'teacher':'admin'}')">${t.role==='admin'?'جعله مدرسًا':'ترقيته لأدمن'}</button><button class="small green" onclick="openAdminSubscription(${safeId})">الاشتراك</button>`
+  : `<button class="small green" onclick="openAdminSubscription(${safeId})">تفعيل/تعديل</button>`;
+ return `<tr><td><b>${esc(t.name||'-')}</b><div class="muted">#${safeId}</div></td><td>${esc(t.email||'-')}</td><td><span class="admin-status">${role}</span></td><td>${esc(plan)}</td><td>${esc(status)}</td><td><div class="actions">${action}</div></td></tr>`;
+}
+function filterAdminTable(tab){
+ const q=($('adminSearch')?.value||'').toLowerCase();
+ const list=adminCache.teachers.filter(t=>(`${t.name||''} ${t.email||''}`).toLowerCase().includes(q));
+ $('adminTeacherRows').innerHTML=list.map(t=>adminTeacherRow(t,tab)).join('')||'<tr><td colspan="6" class="empty">لا توجد نتائج</td></tr>';
+}
+function filterAdminStudents(){
+ const q=($('adminStudentSearch')?.value||'').toLowerCase();
+ const list=adminCache.students.filter(s=>(`${s.name||''} ${s.teacher_name||''} ${s.teacher_email||''}`).toLowerCase().includes(q));
+ $('adminStudentRows').innerHTML=list.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.class_name||s.grade||'-')}</td><td>${esc(s.phone||'-')}</td><td>${esc(s.teacher_name||'-')}</td><td>${esc(s.teacher_email||'-')}</td><td>${esc(String(s.created_at||'').slice(0,10)||'-')}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا توجد نتائج</td></tr>';
+}
+async function toggleTeacherRole(id,role){
+ if(!confirm(role==='admin'?'ترقية الحساب إلى أدمن؟':'إزالة صلاحية الأدمن من هذا الحساب؟'))return;
+ try{await api(`/api/admin/teachers/${id}/role`,{method:'PATCH',body:JSON.stringify({role})});showToast('تم تحديث الصلاحية');await loadAdminTab('teachers');}
+ catch(e){alert(e.message);}
+}
+function openAdminSubscription(id){
+ const t=adminCache.teachers.find(x=>Number(x.id)===Number(id)); if(!t)return;
+ const start=(t.subscription_start||'').slice(0,10), end=(t.subscription_end||'').slice(0,10);
+ openModal(`<div class="modal-head"><h2>💳 اشتراك ${esc(t.name)}</h2><button class="close" onclick="closeModal()">✕</button></div>
+ <div class="muted">${esc(t.email)}</div><div class="form-grid" style="margin-top:14px">
+ <div class="field"><label>الخطة</label><select id="subPlan"><option value="trial">تجريبية</option><option value="monthly">شهرية</option><option value="yearly">سنوية</option><option value="lifetime">مدى الحياة</option></select></div>
+ <div class="field"><label>الحالة</label><select id="subStatus"><option value="active">مفعّل</option><option value="trial">تجريبي</option><option value="pending">في انتظار الدفع</option><option value="expired">منتهي</option><option value="cancelled">ملغي</option></select></div>
+ <div class="field"><label>تاريخ البداية</label><input id="subStart" type="date" value="${esc(start)}"></div>
+ <div class="field"><label>تاريخ الانتهاء</label><input id="subEnd" type="date" value="${esc(end)}"></div>
+ <div class="field" style="grid-column:1/-1"><label>مرجع الدفع / ملاحظات</label><input id="subRef" value="${esc(t.payment_reference||'')}" maxlength="200"></div></div>
+ <button class="primary" style="width:100%" onclick="saveAdminSubscription(${Number(t.id)})">حفظ الاشتراك</button>`);
+ $('subPlan').value=t.subscription_plan||'monthly'; $('subStatus').value=t.subscription_status||'active';
+}
+async function saveAdminSubscription(id){
+ const payload={plan:$('subPlan').value,status:$('subStatus').value,start_date:$('subStart').value||null,end_date:$('subEnd').value||null,payment_reference:$('subRef').value.trim()};
+ try{await api(`/api/admin/teachers/${id}/subscription`,{method:'PUT',body:JSON.stringify(payload)});closeModal();showToast('تم حفظ الاشتراك');await loadAdminTab('subscriptions');}
+ catch(e){alert(e.message);}
+}
+async function saveAdminSettings(){
+ const settings={site_name:$('setSiteName').value.trim(),support_email:$('setSupportEmail').value.trim(),support_phone:$('setSupportPhone').value.trim(),trial_days:$('setTrialDays').value,announcement:$('setAnnouncement').value.trim()};
+ try{await api('/api/admin/settings',{method:'PUT',body:JSON.stringify({settings})});showToast('تم حفظ الإعدادات');await loadAdminTab('settings');}
+ catch(e){alert(e.message);}
 }
 
 checkAuth();
