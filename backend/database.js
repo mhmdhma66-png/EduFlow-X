@@ -159,4 +159,22 @@ CREATE TABLE IF NOT EXISTS student_classes (
 
 console.log("EduFlow X Database is ready 🗄️");
 
+// ====================================
+// Subscriptions - نظام الاشتراكات
+// ====================================
+db.exec(`
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    teacher_id INTEGER NOT NULL UNIQUE,
+    plan TEXT NOT NULL DEFAULT 'trial',
+    status TEXT NOT NULL DEFAULT 'trial',
+    start_date DATETIME,
+    end_date DATETIME,
+    payment_reference TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (teacher_id)
+        REFERENCES teachers(id)
+        ON DELETE CASCADE
+);
+`);
 module.exports = db;
